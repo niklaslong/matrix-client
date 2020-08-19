@@ -20,6 +20,13 @@ defmodule MatrixClient do
     handle_result(Client.server_discovery(url))
   end
 
+  def register_user(session, username, password) do
+    {:ok, url} = Session.get(session, :url)
+    auth = Client.Auth.login_dummy()
+    opts = %{username: username}
+    Client.register_user(url, password, auth, opts)
+  end
+
   def login_user(session, username, password) do
     {:ok, url} = Session.get(session, :url)
     auth = Client.Auth.login_user(username, password)
