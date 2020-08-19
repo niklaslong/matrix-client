@@ -64,6 +64,6 @@ defmodule MatrixClient.Session do
   def sync(pid, opts \\ %{}) do
     {:ok, url} = get(pid, :url)
     {:ok, token} = get(pid, :token)
-    MatrixSDK.API.sync(url, token, opts)
+    MatrixSDK.Client.sync(url, token, opts)
   end
 end

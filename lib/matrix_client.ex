@@ -4,17 +4,27 @@ defmodule MatrixClient do
   """
 
   alias MatrixClient.{Session}
-  alias MatrixSDK.{API, Auth, RoomEvent}
+  alias MatrixSDK.{Client}
 
   def new_session(url) do
     Session.start_link(url)
   end
 
+  def spec_versions(session) do
+    {:ok, url} = Session.get(session, :url)
+    handle_result(Client.spec_versions(url))
+  end
+
+  def server_discovery(session) do
+    {:ok, url} = Session.get(session, :url)
+    handle_result(Client.server_discovery(url))
+  end
+
   def login_user(session, username, password) do
     {:ok, url} = Session.get(session, :url)
-    auth = Auth.login_user(username, password)
+    auth = Client.Auth.login_user(username, password)
     handle_result(
-      API.login(url, auth),
+      Client.login(url, auth),
       fn body ->
 	token = Map.get(body, "access_token")
 	if token do
@@ -29,26 +39,26 @@ defmodule MatrixClient do
   def logout(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(API.logout(url, token))
+    handle_result(Client.logout(url, token))
   end
 
   def join_room(session, room_id, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(API.join_room(url, token, room_id, opts))    
+    handle_result(Client.join_room(url, token, room_id, opts))    
   end
 
   def leave_room(session, room_id) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(API.leave_room(url, token, room_id))
+    handle_result(Client.leave_room(url, token, room_id))
   end
 
   def joined_rooms(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
     handle_result(
-      API.joined_rooms(url, token),
+      Client.joined_rooms(url, token),
       fn body -> {:ok, Map.get(body, "joined_rooms")} end
     )
   end
@@ -56,18 +66,24 @@ defmodule MatrixClient do
   def send_message(session, room_id, message) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    room_event = RoomEvent.message(room_id, :text, message)
-    handle_result(
-      API.send_room_event(url, token, room_event, tx_id())
-    )
+    #room_event = Client.RoomEvent.message(room_id, :text, message)
+    # handle_result(
+    #   Client.send_room_event(url, token, room_event, tx_id())
+    # )
   end
+
+  def sync(pid, opts \\ %{}) do
+    {:ok, url} = Session.get(pid, :url)
+    {:ok, token} = Session.get(pid, :token)
+    MatrixSDK.Client.sync(url, token, opts)
+  end  
 
   def room_messages(session, room_id, opts \\ %{}) do
     {url, token} = url_token(session)
     timestamp = "t123456"
     dir = "f"
     handle_result(
-      API.room_messages(url, token, room_id, timestamp, dir, opts)
+      Client.room_messages(url, token, room_id, timestamp, dir, opts)
     )
   end
 
