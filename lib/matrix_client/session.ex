@@ -5,8 +5,7 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    rooms_state = %{join: %{}, invite: %{}, leave: %{}}
-    Agent.start_link(fn -> %{url: url, rooms: rooms_state} end)
+    Agent.start_link(fn -> %{url: url, rooms: %{}} end)
   end
 
   @doc """
@@ -35,35 +34,44 @@ defmodule MatrixClient.Session do
     )
   end
 
-  def put_room(bucket, key, room_id, new_room_state) do
-    {:ok, rooms} = get(bucket, :rooms)
-    section = Map.get(rooms, key)
-    
-    new_section = Map.put(section, room_id, new_room_state)
-    new_rooms = Map.put(rooms, key, new_section)
-    
+  def get_rooms(bucket) do
+    Agent.get(bucket, &Map.get(&1, :rooms))    
+  end
+
+  def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
   end
 
-  def put_room_events_join(bucket, room_id, event) do
-    put_room(bucket, :join, room_id, event)
+  def room_join_data(data) do
+    %{"rooms" => rooms} = data
+    rooms["join"]
   end
 
-  def put_room_events_invite(bucket, room_id, event) do
-    put_room(bucket, :invite, room_id, event)
+  def sync_rooms(bucket, data) do
+    join_rooms = room_join_data(data)
+    new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
+    update_rooms(bucket, new_rooms)
   end
 
-  def put_room_events_leave(bucket, room_id, event) do
-    put_room(bucket, :leave, room_id, event)
+  def sync_room({room_id, room_data}, rooms) do
+    %{"timeline" => %{"events" => timeline}} = room_data
+    if rooms[room_id] do
+      new_timeline =
+	rooms[room_id]
+	|> Enum.concat(timeline)
+	|> Enum.uniq
+
+	Map.put(rooms, room_id, new_timeline)
+    else
+      Map.put(rooms, room_id, timeline)
+    end
   end
 
-  def start_sync(pid) do
-    MatrixClient.Synchronizer.start_link(%{session: pid})
-  end
-
-  def sync(pid, opts \\ %{}) do
-    {:ok, url} = get(pid, :url)
-    {:ok, token} = get(pid, :token)
-    MatrixSDK.Client.sync(url, token, opts)
-  end
+  def room_timeline(bucket, room_id) do
+    rooms = get_rooms(bucket)
+    case rooms[room_id] do
+      nil -> {:error, "#{room_id} not found"}
+      timeline -> {:ok, timeline}
+    end
+  end  
 end

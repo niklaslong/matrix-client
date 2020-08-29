@@ -24,7 +24,15 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(session, :url)
     auth = Client.Auth.login_dummy()
     opts = %{username: username}
-    Client.register_user(url, password, auth, opts)
+    handle_result(
+      Client.register_user(url, password, auth, opts),
+      fn body ->
+	case Map.get(body, "access_token") do
+	  nil -> {:error, "No token found"}
+	  token -> Session.put(session, :token, token)
+	end
+      end
+    )
   end
 
   def login_user(session, username, password) do
@@ -49,6 +57,12 @@ defmodule MatrixClient do
     handle_result(Client.logout(url, token))
   end
 
+  def create_anonymous_room(session) do
+    {:ok, url} = Session.get(session, :url)
+    {:ok, token} = Session.get(session, :token)
+    handle_result(Client.create_room(url, token))
+  end
+
   def join_room(session, room_id, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
@@ -70,28 +84,36 @@ defmodule MatrixClient do
     )
   end
 
-  def send_message(session, room_id, message) do
+  def send_text_message(session, room_id, message) do
+    send_message(session, room_id, :text, message)
+  end
+
+  def send_message(session, room_id, type, message) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    #room_event = Client.RoomEvent.message(room_id, :text, message)
-    # handle_result(
-    #   Client.send_room_event(url, token, room_event, tx_id())
-    # )
+    room_event = Client.RoomEvent.message(
+      room_id, type,
+      message, tx_id()
+    )
+
+    handle_result(
+      Client.send_room_event(url, token, room_event)
+    )    
   end
 
   def sync(pid, opts \\ %{}) do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
-    MatrixSDK.Client.sync(url, token, opts)
-  end  
-
-  def room_messages(session, room_id, opts \\ %{}) do
-    {url, token} = url_token(session)
-    timestamp = "t123456"
-    dir = "f"
     handle_result(
-      Client.room_messages(url, token, room_id, timestamp, dir, opts)
+      Client.sync(url, token, opts),
+      fn body ->
+	Session.sync_rooms(pid, body)
+      end
     )
+  end
+
+  def room_timeline(pid, room_id) do
+    Session.room_timeline(pid, room_id)
   end
 
   defp handle_result(result, handler \\ nil) do
@@ -119,12 +141,6 @@ defmodule MatrixClient do
     100
     |> :crypto.strong_rand_bytes()
     |> Base.url_encode64()
-  end
-
-  defp url_token(session) do
-    {:ok, url} = Session.get(session, :url)
-    {:ok, token} = Session.get(session, :token)
-    {url, token}
   end
 
 end
