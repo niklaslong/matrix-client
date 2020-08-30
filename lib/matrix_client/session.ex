@@ -28,14 +28,14 @@ defmodule MatrixClient.Session do
   def put_map(bucket, m) do
     Enum.map(
       fn {k, v} ->
-	put(bucket, k, v)
+        put(bucket, k, v)
       end,
       m
     )
   end
 
   def get_rooms(bucket) do
-    Agent.get(bucket, &Map.get(&1, :rooms))    
+    Agent.get(bucket, &Map.get(&1, :rooms))
   end
 
   def update_rooms(bucket, new_rooms) do
@@ -55,13 +55,14 @@ defmodule MatrixClient.Session do
 
   def sync_room({room_id, room_data}, rooms) do
     %{"timeline" => %{"events" => timeline}} = room_data
+
     if rooms[room_id] do
       new_timeline =
-	rooms[room_id]
-	|> Enum.concat(timeline)
-	|> Enum.uniq
+        rooms[room_id]
+        |> Enum.concat(timeline)
+        |> Enum.uniq()
 
-	Map.put(rooms, room_id, new_timeline)
+      Map.put(rooms, room_id, new_timeline)
     else
       Map.put(rooms, room_id, timeline)
     end
@@ -69,9 +70,10 @@ defmodule MatrixClient.Session do
 
   def room_timeline(bucket, room_id) do
     rooms = get_rooms(bucket)
+
     case rooms[room_id] do
       nil -> {:error, "#{room_id} not found"}
       timeline -> {:ok, timeline}
     end
-  end  
+  end
 end

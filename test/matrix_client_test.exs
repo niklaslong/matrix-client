@@ -6,7 +6,7 @@ defmodule MatrixClientTest do
     {:ok, pid} = MatrixClient.new_session("http://localhost:8008")
     :ok = MatrixClient.register_user(pid, Rando.string(), Rando.string())
 
-    :timer.sleep(3000)
+    :timer.sleep(5000)
   end
 
   test "login and logout" do
@@ -20,7 +20,7 @@ defmodule MatrixClientTest do
     result = MatrixClient.logout(pid)
     assert result.status == 200
 
-    :timer.sleep(3000)    
+    :timer.sleep(5000)
   end
 
   test "create anonymous room" do
@@ -38,7 +38,7 @@ defmodule MatrixClientTest do
 
     MatrixClient.logout(pid)
 
-    :timer.sleep(3000)    
+    :timer.sleep(5000)
   end
 
   test "send message, sync and check timeline" do
@@ -46,15 +46,17 @@ defmodule MatrixClientTest do
 
     %{:status => 200, "room_id" => room_id} = MatrixClient.create_anonymous_room(pid)
 
-    %{:status => 200, "event_id" => event_id} = MatrixClient.send_text_message(pid, room_id, "Hello, World!")
+    %{:status => 200, "event_id" => event_id} =
+      MatrixClient.send_text_message(pid, room_id, "Hello, World!")
 
     MatrixClient.sync(pid)
 
     {:ok, timeline} = MatrixClient.room_timeline(pid, room_id)
 
-    filtered_events = Enum.filter(timeline, fn e ->
-      e["event_id"] == event_id
-    end)
+    filtered_events =
+      Enum.filter(timeline, fn e ->
+        e["event_id"] == event_id
+      end)
 
     assert length(filtered_events) == 1
 
@@ -66,6 +68,25 @@ defmodule MatrixClientTest do
 
     MatrixClient.logout(pid)
 
-    :timer.sleep(3000)
+    :timer.sleep(5000)
+  end
+
+  test "invite user to room and accept invite" do
+    pid = Rando.user()
+    :timer.sleep(5000)
+    {pid2, username} = Rando.user2()
+    {:ok, hostname} = :inet.gethostname()
+    user_id = "@#{username}:#{hostname}"
+
+    %{"room_id" => room_id} = MatrixClient.create_anonymous_room(pid, %{visibility: "private"})
+
+    %{:status => 200} = MatrixClient.invite_to_room(pid, room_id, user_id)
+
+    MatrixClient.sync(pid2)
+
+    # TODO: Accept room invite and join room
+
+    MatrixClient.logout(pid)
+    MatrixClient.logout(pid2)
   end
 end

@@ -24,13 +24,14 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(session, :url)
     auth = Client.Auth.login_dummy()
     opts = %{username: username}
+
     handle_result(
       Client.register_user(url, password, auth, opts),
       fn body ->
-	case Map.get(body, "access_token") do
-	  nil -> {:error, "No token found"}
-	  token -> Session.put(session, :token, token)
-	end
+        case Map.get(body, "access_token") do
+          nil -> {:error, "No token found"}
+          token -> Session.put(session, :token, token)
+        end
       end
     )
   end
@@ -38,15 +39,17 @@ defmodule MatrixClient do
   def login_user(session, username, password) do
     {:ok, url} = Session.get(session, :url)
     auth = Client.Auth.login_user(username, password)
+
     handle_result(
       Client.login(url, auth),
       fn body ->
-	token = Map.get(body, "access_token")
-	if token do
-	  Session.put(session, :token, token)
-	else
-	  {:error, "Invalid token value: #{token}"}
-	end
+        token = Map.get(body, "access_token")
+
+        if token do
+          Session.put(session, :token, token)
+        else
+          {:error, "Invalid token value: #{token}"}
+        end
       end
     )
   end
@@ -57,16 +60,16 @@ defmodule MatrixClient do
     handle_result(Client.logout(url, token))
   end
 
-  def create_anonymous_room(session) do
+  def create_anonymous_room(session, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.create_room(url, token))
+    handle_result(Client.create_room(url, token, opts))
   end
 
   def join_room(session, room_id, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.join_room(url, token, room_id, opts))    
+    handle_result(Client.join_room(url, token, room_id, opts))
   end
 
   def leave_room(session, room_id) do
@@ -78,6 +81,7 @@ defmodule MatrixClient do
   def joined_rooms(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
+
     handle_result(
       Client.joined_rooms(url, token),
       fn body -> {:ok, Map.get(body, "joined_rooms")} end
@@ -91,23 +95,27 @@ defmodule MatrixClient do
   def send_message(session, room_id, type, message) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    room_event = Client.RoomEvent.message(
-      room_id, type,
-      message, tx_id()
-    )
 
-    handle_result(
-      Client.send_room_event(url, token, room_event)
-    )    
+    room_event =
+      Client.RoomEvent.message(
+        room_id,
+        type,
+        message,
+        tx_id()
+      )
+
+    handle_result(Client.send_room_event(url, token, room_event))
   end
 
   def sync(pid, opts \\ %{}) do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
+
     handle_result(
       Client.sync(url, token, opts),
       fn body ->
-	Session.sync_rooms(pid, body)
+        IO.inspect(body)
+        Session.sync_rooms(pid, body)
       end
     )
   end
@@ -116,19 +124,29 @@ defmodule MatrixClient do
     Session.room_timeline(pid, room_id)
   end
 
+  def invite_to_room(pid, room_id, user_id) do
+    {:ok, url} = Session.get(pid, :url)
+    {:ok, token} = Session.get(pid, :token)
+    handle_result(Client.room_invite(url, token, room_id, user_id))
+  end
+
   defp handle_result(result, handler \\ nil) do
     h =
-    if handler do
-      handler
-    else
-      fn body -> body end
-    end
-    
+      if handler do
+        handler
+      else
+        fn body -> body end
+      end
+
     case result do
       {:ok, %{status: 200} = resp} ->
-	h.(body_helper(resp))
-      {:ok, resp} -> {:error, body_helper(resp)}
-      {:error, _} = e -> e
+        h.(body_helper(resp))
+
+      {:ok, resp} ->
+        {:error, body_helper(resp)}
+
+      {:error, _} = e ->
+        e
     end
   end
 
@@ -142,5 +160,4 @@ defmodule MatrixClient do
     |> :crypto.strong_rand_bytes()
     |> Base.url_encode64()
   end
-
 end
