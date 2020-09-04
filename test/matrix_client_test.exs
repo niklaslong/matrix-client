@@ -72,7 +72,7 @@ defmodule MatrixClientTest do
   end
 
   test "invite user to room and accept invite" do
-    pid = Rando.user()
+    {pid, username0} = Rando.user2()
     :timer.sleep(5000)
     {pid2, username} = Rando.user2()
     {:ok, hostname} = :inet.gethostname()
@@ -84,7 +84,18 @@ defmodule MatrixClientTest do
 
     MatrixClient.sync(pid2)
 
-    # TODO: Accept room invite and join room
+    inviter =
+      pid2
+      |> MatrixClient.invites()
+      |> Map.get(room_id)
+
+    assert inviter == "@#{username0}:#{hostname}"
+
+    :ok = MatrixClient.accept_invite(pid2, room_id)
+
+    invites = MatrixClient.invites(pid2)
+
+    assert invites == %{}
 
     MatrixClient.logout(pid)
     MatrixClient.logout(pid2)

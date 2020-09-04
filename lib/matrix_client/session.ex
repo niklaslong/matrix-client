@@ -5,7 +5,7 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    Agent.start_link(fn -> %{url: url, rooms: %{}} end)
+    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}} end)
   end
 
   @doc """
@@ -38,8 +38,21 @@ defmodule MatrixClient.Session do
     Agent.get(bucket, &Map.get(&1, :rooms))
   end
 
+  def get_invites(bucket) do
+    Agent.get(bucket, &Map.get(&1, :invites))
+  end
+
   def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
+  end
+
+  def update_invites(bucket, new_invites) do
+    put(bucket, :invites, new_invites)
+  end
+
+  def delete_invite(bucket, room_id) do
+    invites = get_invites(bucket)
+    update_invites(bucket, Map.delete(invites, room_id))
   end
 
   def room_join_data(data) do
@@ -47,10 +60,19 @@ defmodule MatrixClient.Session do
     rooms["join"]
   end
 
+  def room_invite_data(data) do
+    %{"rooms" => rooms} = data
+    rooms["invite"]
+  end
+
   def sync_rooms(bucket, data) do
     join_rooms = room_join_data(data)
     new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
     update_rooms(bucket, new_rooms)
+
+    invite_rooms = room_invite_data(data)
+    new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
+    update_invites(bucket, new_invites)
   end
 
   def sync_room({room_id, room_data}, rooms) do
@@ -75,5 +97,24 @@ defmodule MatrixClient.Session do
       nil -> {:error, "#{room_id} not found"}
       timeline -> {:ok, timeline}
     end
+  end
+
+  def sync_invite({room_id, invite_data}, rooms) do
+    %{"invite_state" => %{"events" => events}} = invite_data
+    sender = invite_sender(events)
+    Map.put(rooms, room_id, sender)
+  end
+
+  def invite_sender(events) do
+    [event] = filter_invite_events(events)
+    %{"sender" => sender} = event
+    sender
+  end
+
+  def filter_invite_events(events) do
+    Enum.filter(events, fn event ->
+      %{"content" => content} = event
+      content == %{"join_rule" => "invite"}
+    end)
   end
 end

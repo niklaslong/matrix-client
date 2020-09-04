@@ -3,7 +3,7 @@ ExUnit.start()
 # Mostly taken from here https://elixirforum.com/t/generating-5-000-random-strings-improving-performance-by-an-order-of-magnitude-but-can-it-be-better/23206/5
 
 defmodule Rando do
-  chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
+  chars = 'abcdefghijklmnopqrstuvwxyz123456789'
 
   @chars List.to_tuple(chars)
 

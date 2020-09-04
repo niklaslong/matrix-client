@@ -114,7 +114,6 @@ defmodule MatrixClient do
     handle_result(
       Client.sync(url, token, opts),
       fn body ->
-        IO.inspect(body)
         Session.sync_rooms(pid, body)
       end
     )
@@ -128,6 +127,15 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
     handle_result(Client.room_invite(url, token, room_id, user_id))
+  end
+
+  def invites(pid) do
+    Session.get_invites(pid)
+  end
+
+  def accept_invite(pid, room_id) do
+    %{status: 200} = join_room(pid, room_id)
+    Session.delete_invite(pid, room_id)
   end
 
   defp handle_result(result, handler \\ nil) do
