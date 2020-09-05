@@ -60,6 +60,13 @@ defmodule MatrixClient do
     handle_result(Client.logout(url, token))
   end
 
+  def create_room(session, name, opts \\ %{}) do
+    {:ok, url} = Session.get(session, :url)
+    {:ok, token} = Session.get(session, :token)
+    new_opts = Map.put(opts, :room_alias_name, name)
+    handle_result(Client.create_room(url, token, new_opts)) 
+  end
+
   def create_anonymous_room(session, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)

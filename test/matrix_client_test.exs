@@ -93,6 +93,8 @@ defmodule MatrixClientTest do
 
     :ok = MatrixClient.accept_invite(pid2, room_id)
 
+    MatrixClient.sync(pid2)
+
     invites = MatrixClient.invites(pid2)
 
     assert invites == %{}
@@ -100,4 +102,26 @@ defmodule MatrixClientTest do
     MatrixClient.logout(pid)
     MatrixClient.logout(pid2)
   end
+
+  test "create room with name" do
+    pid = Rando.user()
+    name = Rando.string()
+
+    %{:status => 200, "room_id" => room_id_a} = MatrixClient.create_room(pid, name)
+
+    {:ok, room_ids} = MatrixClient.joined_rooms(pid)
+
+    assert length(room_ids) == 1
+
+    [room_id_b] = room_ids
+
+    assert room_id_b == room_id_a
+
+    # TODO: Sync and check for alias
+
+    MatrixClient.logout(pid)
+
+    :timer.sleep(5000)
+  end  
+  
 end
