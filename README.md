@@ -14,6 +14,16 @@ source env/bin/activate
 synctl start
 ```
 
+### Testing
+
+When doing development the main test module is run against an external matrix server.
+
+To run the test module with external enabled:
+
+```
+mix test --include external:true
+```
+
 ### Example Usage
 
 ```elixir
