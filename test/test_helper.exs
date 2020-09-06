@@ -1,4 +1,5 @@
 ExUnit.start()
+ExUnit.configure(exclude: [external: true])
 
 # Mostly taken from here https://elixirforum.com/t/generating-5-000-random-strings-improving-performance-by-an-order-of-magnitude-but-can-it-be-better/23206/5
 

@@ -2,6 +2,8 @@ defmodule MatrixClientTest do
   use ExUnit.Case, async: false
   doctest MatrixClient
 
+  @moduletag :external  
+
   test "register user" do
     {:ok, pid} = MatrixClient.new_session("http://localhost:8008")
     :ok = MatrixClient.register_user(pid, Rando.string(), Rando.string())
