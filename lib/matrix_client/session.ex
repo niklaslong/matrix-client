@@ -50,6 +50,10 @@ defmodule MatrixClient.Session do
     put(bucket, :invites, new_invites)
   end
 
+  def update_next_batch(bucket, next_batch) do
+    put(bucket, :next_batch, next_batch)
+  end
+
   def delete_invite(bucket, room_id) do
     invites = get_invites(bucket)
     update_invites(bucket, Map.delete(invites, room_id))
@@ -73,6 +77,9 @@ defmodule MatrixClient.Session do
     invite_rooms = room_invite_data(data)
     new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
     update_invites(bucket, new_invites)
+
+    %{"next_batch" => next_batch} = data
+    update_next_batch(bucket, next_batch)
   end
 
   def sync_room({room_id, room_data}, rooms) do

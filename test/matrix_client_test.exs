@@ -2,7 +2,7 @@ defmodule MatrixClientTest do
   use ExUnit.Case, async: false
   doctest MatrixClient
 
-  @moduletag :external  
+  @moduletag :external
 
   test "register user" do
     {:ok, pid} = MatrixClient.new_session("http://localhost:8008")
@@ -124,6 +124,5 @@ defmodule MatrixClientTest do
     MatrixClient.logout(pid)
 
     :timer.sleep(5000)
-  end  
-  
+  end
 end

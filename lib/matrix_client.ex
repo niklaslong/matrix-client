@@ -64,7 +64,7 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
     new_opts = Map.put(opts, :room_alias_name, name)
-    handle_result(Client.create_room(url, token, new_opts)) 
+    handle_result(Client.create_room(url, token, new_opts))
   end
 
   def create_anonymous_room(session, opts \\ %{}) do
@@ -118,8 +118,14 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
 
+    new_opts =
+      case Session.get(pid, :next_batch) do
+        {:ok, next_batch} -> Map.put(opts, :since, next_batch)
+        _ -> opts
+      end
+
     handle_result(
-      Client.sync(url, token, opts),
+      Client.sync(url, token, new_opts),
       fn body ->
         Session.sync_rooms(pid, body)
       end
