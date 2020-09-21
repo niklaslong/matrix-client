@@ -56,7 +56,7 @@ defmodule MatrixClient.Session do
 
   def update_leaves(bucket, new_leaves) do
     put(bucket, :leaves, new_leaves)
-  end  
+  end
 
   def update_next_batch(bucket, next_batch) do
     put(bucket, :next_batch, next_batch)
