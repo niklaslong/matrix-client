@@ -5,7 +5,7 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}} end)
+    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}, leaves: %{}} end)
   end
 
   @doc """
@@ -42,6 +42,10 @@ defmodule MatrixClient.Session do
     Agent.get(bucket, &Map.get(&1, :invites))
   end
 
+  def get_leaves(bucket) do
+    Agent.get(bucket, &Map.get(&1, :leaves))
+  end
+
   def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
   end
@@ -49,6 +53,10 @@ defmodule MatrixClient.Session do
   def update_invites(bucket, new_invites) do
     put(bucket, :invites, new_invites)
   end
+
+  def update_leaves(bucket, new_leaves) do
+    put(bucket, :leaves, new_leaves)
+  end  
 
   def update_next_batch(bucket, next_batch) do
     put(bucket, :next_batch, next_batch)
@@ -69,6 +77,11 @@ defmodule MatrixClient.Session do
     rooms["invite"]
   end
 
+  def room_leave_data(data) do
+    %{"rooms" => rooms} = data
+    rooms["leave"]
+  end
+
   def sync_rooms(bucket, data) do
     join_rooms = room_join_data(data)
     new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
@@ -77,6 +90,10 @@ defmodule MatrixClient.Session do
     invite_rooms = room_invite_data(data)
     new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
     update_invites(bucket, new_invites)
+
+    leave_rooms = room_leave_data(data)
+    new_leaves = Enum.reduce(leave_rooms, get_leaves(bucket), &sync_leave/2)
+    update_leaves(bucket, new_leaves)
 
     %{"next_batch" => next_batch} = data
     update_next_batch(bucket, next_batch)
@@ -120,8 +137,24 @@ defmodule MatrixClient.Session do
 
   def filter_invite_events(events) do
     Enum.filter(events, fn event ->
-      %{"content" => content} = event
-      content == %{"join_rule" => "invite"}
+      %{"type" => type} = event
+      type == "m.room.join_rules"
     end)
   end
+
+  def sync_leave({room_id, leave_data}, rooms) do
+    %{"timeline" => %{"events" => timeline}} = leave_data
+
+    if rooms[room_id] do
+      new_timeline =
+        rooms[room_id]
+        |> Enum.concat(timeline)
+        |> Enum.uniq()
+
+      Map.put(rooms, room_id, new_timeline)
+    else
+      Map.put(rooms, room_id, timeline)
+    end
+  end
+  
 end

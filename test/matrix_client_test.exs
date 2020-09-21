@@ -125,4 +125,44 @@ defmodule MatrixClientTest do
 
     :timer.sleep(5000)
   end
+
+  test "leave room after invite" do
+    pid = Rando.user()
+    {pid2, username} = Rando.user2()
+    {:ok, hostname} = :inet.gethostname()
+    user_id = "@#{username}:#{hostname}"
+
+    %{"room_id" => room_id} = MatrixClient.create_anonymous_room(pid)
+
+    %{:status => 200} = MatrixClient.invite_to_room(pid, room_id, user_id)
+
+    :timer.sleep(5000)
+
+    MatrixClient.sync(pid2)
+
+    :ok = MatrixClient.accept_invite(pid2, room_id)
+
+    MatrixClient.sync(pid2)
+
+    {:ok, room_ids} = MatrixClient.joined_rooms(pid2)
+
+    assert length(room_ids) == 1    
+
+    %{status: 200} = MatrixClient.leave_room(pid2, room_id)
+
+    {:ok, room_ids_2} = MatrixClient.joined_rooms(pid2)
+
+    assert length(room_ids_2) == 0
+
+    MatrixClient.sync(pid2)
+
+    leaves = MatrixClient.leaves(pid2)
+
+    assert leaves != %{}
+
+    MatrixClient.logout(pid)
+    MatrixClient.logout(pid2)    
+
+    :timer.sleep(5000)    
+  end
 end
