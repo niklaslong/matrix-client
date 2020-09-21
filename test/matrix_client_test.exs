@@ -146,7 +146,7 @@ defmodule MatrixClientTest do
 
     {:ok, room_ids} = MatrixClient.joined_rooms(pid2)
 
-    assert length(room_ids) == 1    
+    assert length(room_ids) == 1
 
     %{status: 200} = MatrixClient.leave_room(pid2, room_id)
 
@@ -161,8 +161,8 @@ defmodule MatrixClientTest do
     assert leaves != %{}
 
     MatrixClient.logout(pid)
-    MatrixClient.logout(pid2)    
+    MatrixClient.logout(pid2)
 
-    :timer.sleep(5000)    
+    :timer.sleep(5000)
   end
 end
