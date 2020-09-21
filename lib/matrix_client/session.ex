@@ -5,7 +5,7 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}} end)
+    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}, leaves: %{}} end)
   end
 
   @doc """
@@ -42,6 +42,10 @@ defmodule MatrixClient.Session do
     Agent.get(bucket, &Map.get(&1, :invites))
   end
 
+  def get_leaves(bucket) do
+    Agent.get(bucket, &Map.get(&1, :leaves))
+  end
+
   def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
   end
@@ -49,6 +53,10 @@ defmodule MatrixClient.Session do
   def update_invites(bucket, new_invites) do
     put(bucket, :invites, new_invites)
   end
+
+  def update_leaves(bucket, new_leaves) do
+    put(bucket, :leaves, new_leaves)
+  end  
 
   def update_next_batch(bucket, next_batch) do
     put(bucket, :next_batch, next_batch)
@@ -84,6 +92,7 @@ defmodule MatrixClient.Session do
     update_invites(bucket, new_invites)
 
     leave_rooms = room_leave_data(data)
+
     new_rooms2 = Enum.reduce(leave_rooms, get_rooms(bucket), &sync_leave/2)
     update_rooms(bucket, new_rooms2)
 

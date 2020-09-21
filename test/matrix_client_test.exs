@@ -132,6 +132,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+
   @tag external: true
   test "leave room after invite" do
     pid = Rando.user()
@@ -151,6 +152,7 @@ defmodule MatrixClientTest do
     MatrixClient.sync(pid2)
 
     {:ok, room_ids} = MatrixClient.joined_rooms(pid2)
+
     assert length(room_ids) == 1
 
     rooms = MatrixClient.rooms(pid2) |> Map.keys()
