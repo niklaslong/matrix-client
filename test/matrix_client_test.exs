@@ -146,18 +146,18 @@ defmodule MatrixClientTest do
     {:ok, room_ids} = MatrixClient.joined_rooms(pid2)
     assert length(room_ids) == 1
 
-    rooms = MatrixClient.rooms(pid2) |> Map.keys
+    rooms = MatrixClient.rooms(pid2) |> Map.keys()
     assert length(rooms) == 1
 
     %{status: 200} = MatrixClient.leave_room(pid2, room_id)
 
     {:ok, room_ids_2} = MatrixClient.joined_rooms(pid2)
     assert length(room_ids_2) == 0
-    
+
     MatrixClient.sync(pid2)
 
-    rooms2 = MatrixClient.rooms(pid2) |> Map.keys
-    assert length(rooms2) == 0    
+    rooms2 = MatrixClient.rooms(pid2) |> Map.keys()
+    assert length(rooms2) == 0
 
     MatrixClient.logout(pid)
     MatrixClient.logout(pid2)
