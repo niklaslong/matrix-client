@@ -146,8 +146,8 @@ defmodule MatrixClient do
     Session.get_invites(pid)
   end
 
-  def leaves(pid) do
-    Session.get_leaves(pid)
+  def rooms(pid) do
+    Session.get_rooms(pid)
   end
 
   def accept_invite(pid, room_id) do
