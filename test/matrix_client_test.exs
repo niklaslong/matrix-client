@@ -152,7 +152,6 @@ defmodule MatrixClientTest do
     MatrixClient.sync(pid2)
 
     {:ok, room_ids} = MatrixClient.joined_rooms(pid2)
-
     assert length(room_ids) == 1
 
     rooms = MatrixClient.rooms(pid2) |> Map.keys()
@@ -162,7 +161,7 @@ defmodule MatrixClientTest do
 
     {:ok, room_ids_2} = MatrixClient.joined_rooms(pid2)
     assert length(room_ids_2) == 0
-
+    
     MatrixClient.sync(pid2)
 
     rooms2 = MatrixClient.rooms(pid2) |> Map.keys()
