@@ -99,8 +99,8 @@ defmodule MatrixClient do
     aliases = Session.get_aliases(session)
 
     Enum.map(room_ids, fn room_id ->
-      if aliases[room_id] do
-        %{room_id: room_id, alias: aliases[room_id]}
+      if aliases[:ids][room_id] do
+        %{room_id: room_id, alias: aliases[:ids][room_id]}
       else
         %{room_id: room_id}
       end
@@ -145,7 +145,15 @@ defmodule MatrixClient do
   end
 
   def room_timeline(pid, room_id) do
-    Session.room_timeline(pid, room_id)
+    aliases = Session.get_aliases(pid)
+
+    new_id =
+      case aliases[:aliases][room_id] do
+        nil -> room_id
+        id -> id
+      end
+
+    Session.room_timeline(pid, new_id)
   end
 
   def invite_to_room(pid, room_id, user_id) do
@@ -178,10 +186,17 @@ defmodule MatrixClient do
   defp get_room_messages(pid, room_id, direction) do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
+    aliases = Session.get_aliases(pid)
 
-    case Session.prev_batch(pid, room_id) do
+    new_id =
+      case aliases[:aliases][room_id] do
+        nil -> room_id
+        id -> id
+      end
+
+    case Session.prev_batch(pid, new_id) do
       {:ok, prev} ->
-        room_message_helper(Client.room_messages(url, token, room_id, prev, direction))
+        room_message_helper(Client.room_messages(url, token, new_id, prev, direction))
 
       {:error, _} = e ->
         e

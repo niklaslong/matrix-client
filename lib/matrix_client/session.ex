@@ -5,7 +5,9 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}, aliases: %{}} end)
+    Agent.start_link(fn ->
+      %{url: url, rooms: %{}, invites: %{}, aliases: %{ids: %{}, aliases: %{}}}
+    end)
   end
 
   @doc """
@@ -165,9 +167,22 @@ defmodule MatrixClient.Session do
     %{"timeline" => %{"events" => events}} = room_data
 
     case filter_alias_event(events) do
-      [ae] -> Map.put(aliases, room_id, ae["content"]["alias"])
+      [ae] -> alias_helper_ids(aliases, room_id, ae["content"]["alias"])
       _ -> aliases
     end
+  end
+
+  defp alias_helper_ids(aliases, room_id, a) do
+    ids = aliases[:ids]
+    new_ids = Map.put(ids, room_id, a)
+    new_aliases = Map.put(aliases, :ids, new_ids)
+    alias_helper_aliases(new_aliases, room_id, a)
+  end
+
+  defp alias_helper_aliases(aliases, room_id, a) do
+    as = aliases[:aliases]
+    new_aliases = Map.put(as, a, room_id)
+    Map.put(aliases, :aliases, new_aliases)
   end
 
   defp filter_alias_event(events) do
