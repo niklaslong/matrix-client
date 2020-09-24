@@ -69,6 +69,11 @@ defmodule MatrixClient.Session do
     rooms["invite"]
   end
 
+  def room_leave_data(data) do
+    %{"rooms" => rooms} = data
+    rooms["leave"]
+  end
+
   def sync_rooms(bucket, data) do
     join_rooms = room_join_data(data)
     new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
@@ -77,6 +82,10 @@ defmodule MatrixClient.Session do
     invite_rooms = room_invite_data(data)
     new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
     update_invites(bucket, new_invites)
+
+    leave_rooms = room_leave_data(data)
+    new_rooms2 = Enum.reduce(leave_rooms, get_rooms(bucket), &sync_leave/2)
+    update_rooms(bucket, new_rooms2)
 
     %{"next_batch" => next_batch} = data
     update_next_batch(bucket, next_batch)
@@ -120,8 +129,12 @@ defmodule MatrixClient.Session do
 
   def filter_invite_events(events) do
     Enum.filter(events, fn event ->
-      %{"content" => content} = event
-      content == %{"join_rule" => "invite"}
+      %{"type" => type} = event
+      type == "m.room.join_rules"
     end)
+  end
+
+  def sync_leave({room_id, _}, rooms) do
+    Map.delete(rooms, room_id)
   end
 end

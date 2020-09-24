@@ -146,6 +146,10 @@ defmodule MatrixClient do
     Session.get_invites(pid)
   end
 
+  def rooms(pid) do
+    Session.get_rooms(pid)
+  end
+
   def accept_invite(pid, room_id) do
     %{status: 200} = join_room(pid, room_id)
     Session.delete_invite(pid, room_id)
