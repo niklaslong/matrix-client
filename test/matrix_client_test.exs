@@ -172,4 +172,29 @@ defmodule MatrixClientTest do
 
     :timer.sleep(5000)
   end
+
+  test "get room messages" do
+    pid = Rando.user()
+    :timer.sleep(5000)
+
+    %{"room_id" => room_id} = MatrixClient.create_anonymous_room(pid)
+
+    MatrixClient.send_text_message(pid, room_id, "Hello, World!")
+
+    MatrixClient.sync(pid)
+
+    MatrixClient.send_text_message(pid, room_id, "Foobar")
+    MatrixClient.send_text_message(pid, room_id, "Woah there!!!")
+    MatrixClient.send_text_message(pid, room_id, "So decentralized, much wow")
+
+    msgs = MatrixClient.prev_room_messages(pid, room_id)
+
+    assert length(msgs) == 1
+
+    msgs2 = MatrixClient.next_room_messages(pid, room_id)
+
+    assert length(msgs2) == 3
+
+    :timer.sleep(5000)
+  end
 end

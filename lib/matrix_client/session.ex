@@ -118,6 +118,15 @@ defmodule MatrixClient.Session do
     end
   end
 
+  def prev_batch(bucket, room_id) do
+    rooms = get_rooms(bucket)
+
+    case rooms[room_id] do
+      nil -> {:error, "#{room_id} not found. Try syncing."}
+      room -> {:ok, room[:prev_batch]}
+    end
+  end
+
   def sync_invite({room_id, invite_data}, rooms) do
     %{"invite_state" => %{"events" => events}} = invite_data
     sender = invite_sender(events)

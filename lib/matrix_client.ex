@@ -155,6 +155,35 @@ defmodule MatrixClient do
     Session.delete_invite(pid, room_id)
   end
 
+  def next_room_messages(pid, room_id) do
+    get_room_messages(pid, room_id, "f")
+  end
+
+  def prev_room_messages(pid, room_id) do
+    get_room_messages(pid, room_id, "b")
+  end
+
+  defp get_room_messages(pid, room_id, direction) do
+    {:ok, url} = Session.get(pid, :url)
+    {:ok, token} = Session.get(pid, :token)
+
+    case Session.prev_batch(pid, room_id) do
+      {:ok, prev} ->
+        room_message_helper(Client.room_messages(url, token, room_id, prev, direction))
+
+      {:error, _} = e ->
+        e
+    end
+  end
+
+  defp room_message_helper(result) do
+    handle_result(result, fn body ->
+      Enum.filter(body["chunk"], fn m ->
+        m["type"] == "m.room.message"
+      end)
+    end)
+  end
+
   defp handle_result(result, handler \\ nil) do
     h =
       if handler do
