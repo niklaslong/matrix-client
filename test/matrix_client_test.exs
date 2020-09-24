@@ -4,6 +4,7 @@ defmodule MatrixClientTest do
 
   @moduletag :external
 
+  @tag external: true
   test "register user" do
     {:ok, pid} = MatrixClient.new_session("http://localhost:8008")
     :ok = MatrixClient.register_user(pid, Rando.string(), Rando.string())
@@ -11,6 +12,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "login and logout" do
     {:ok, pid} = MatrixClient.new_session("http://localhost:8008")
     username = Rando.string()
@@ -25,6 +27,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "create anonymous room" do
     pid = Rando.user()
 
@@ -43,6 +46,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "send message, sync and check timeline" do
     pid = Rando.user()
 
@@ -73,6 +77,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "invite user to room and accept invite" do
     {pid, username0} = Rando.user2()
     :timer.sleep(5000)
@@ -105,6 +110,7 @@ defmodule MatrixClientTest do
     MatrixClient.logout(pid2)
   end
 
+  @tag external: true
   test "create room with name" do
     pid = Rando.user()
     name = Rando.string()
@@ -126,6 +132,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "leave room after invite" do
     pid = Rando.user()
     {pid2, username} = Rando.user2()
