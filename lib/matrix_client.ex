@@ -91,8 +91,20 @@ defmodule MatrixClient do
 
     handle_result(
       Client.joined_rooms(url, token),
-      fn body -> {:ok, Map.get(body, "joined_rooms")} end
+      fn body -> {:ok, joined_rooms_helper(session, body["joined_rooms"])} end
     )
+  end
+
+  defp joined_rooms_helper(session, room_ids) do
+    aliases = Session.get_aliases(session)
+
+    Enum.map(room_ids, fn room_id ->
+      if aliases[room_id] do
+        %{room_id: room_id, alias: aliases[room_id]}
+      else
+        %{room_id: room_id}
+      end
+    end)
   end
 
   def send_text_message(session, room_id, message) do

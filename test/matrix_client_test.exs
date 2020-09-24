@@ -34,7 +34,7 @@ defmodule MatrixClientTest do
 
     assert length(room_ids) == 1
 
-    [room_id_b] = room_ids
+    [%{room_id: room_id_b}] = room_ids
 
     assert room_id_b == room_id_a
 
@@ -115,11 +115,20 @@ defmodule MatrixClientTest do
 
     assert length(room_ids) == 1
 
-    [room_id_b] = room_ids
+    [%{room_id: room_id_b}] = room_ids
 
     assert room_id_b == room_id_a
 
-    # TODO: Sync and check for alias
+    MatrixClient.sync(pid)
+
+    {:ok, hostname} = :inet.gethostname()
+    a = "##{name}:#{hostname}"
+
+    {:ok, rooms} = MatrixClient.joined_rooms(pid)
+
+    [%{alias: room_alias}] = rooms
+
+    assert room_alias == a
 
     MatrixClient.logout(pid)
 
