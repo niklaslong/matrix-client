@@ -92,17 +92,20 @@ defmodule MatrixClient.Session do
   end
 
   def sync_room({room_id, room_data}, rooms) do
-    %{"timeline" => %{"events" => timeline}} = room_data
+    %{"timeline" => %{"events" => timeline, "prev_batch" => prev_batch}} = room_data
 
     if rooms[room_id] do
+      old_t = rooms[room_id][:timeline]
+
       new_timeline =
-        rooms[room_id]
+        old_t
         |> Enum.concat(timeline)
         |> Enum.uniq()
 
-      Map.put(rooms, room_id, new_timeline)
+      Map.put(rooms, room_id, %{timeline: new_timeline, prev_batch: prev_batch})
     else
-      Map.put(rooms, room_id, timeline)
+      room = %{timeline: timeline, prev_batch: prev_batch}
+      Map.put(rooms, room_id, room)
     end
   end
 
@@ -111,7 +114,7 @@ defmodule MatrixClient.Session do
 
     case rooms[room_id] do
       nil -> {:error, "#{room_id} not found"}
-      timeline -> {:ok, timeline}
+      room -> {:ok, room[:timeline]}
     end
   end
 
