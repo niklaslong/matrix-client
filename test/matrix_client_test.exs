@@ -141,7 +141,6 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
-
   @tag external: true
   test "leave room after invite" do
     pid = Rando.user()
@@ -182,6 +181,7 @@ defmodule MatrixClientTest do
     :timer.sleep(5000)
   end
 
+  @tag external: true
   test "get room messages" do
     pid = Rando.user()
     :timer.sleep(5000)
