@@ -79,11 +79,10 @@ defmodule MatrixClientTest do
 
   @tag external: true
   test "invite user to room and accept invite" do
-    {pid, username0} = Rando.user2()
     :timer.sleep(5000)
+    {pid, username0} = Rando.user2()
     {pid2, username} = Rando.user2()
-    {:ok, hostname} = :inet.gethostname()
-    user_id = "@#{username}:#{hostname}"
+    user_id = "@#{username}:localhost"
 
     %{"room_id" => room_id} = MatrixClient.create_anonymous_room(pid, %{visibility: "private"})
 
@@ -96,7 +95,7 @@ defmodule MatrixClientTest do
       |> MatrixClient.invites()
       |> Map.get(room_id)
 
-    assert inviter == "@#{username0}:#{hostname}"
+    assert inviter == "@#{username0}:localhost"
 
     :ok = MatrixClient.accept_invite(pid2, room_id)
 
@@ -127,8 +126,7 @@ defmodule MatrixClientTest do
 
     MatrixClient.sync(pid)
 
-    {:ok, hostname} = :inet.gethostname()
-    a = "##{name}:#{hostname}"
+    a = "##{name}:localhost"
 
     {:ok, rooms} = MatrixClient.joined_rooms(pid)
 
@@ -145,8 +143,7 @@ defmodule MatrixClientTest do
   test "leave room after invite" do
     pid = Rando.user()
     {pid2, username} = Rando.user2()
-    {:ok, hostname} = :inet.gethostname()
-    user_id = "@#{username}:#{hostname}"
+    user_id = "@#{username}:localhost"
 
     %{"room_id" => room_id} = MatrixClient.create_anonymous_room(pid)
     %{:status => 200} = MatrixClient.invite_to_room(pid, room_id, user_id)

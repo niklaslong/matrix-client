@@ -6,7 +6,7 @@ defmodule MatrixClient.Session do
   """
   def start_link(url) do
     Agent.start_link(fn ->
-      %{url: url, rooms: %{}, invites: %{}, aliases: %{ids: %{}, aliases: %{}}}
+      %{url: url, rooms: %{}, invites: %{}, aliases: %{}, ids: %{}}
     end)
   end
 
@@ -48,6 +48,10 @@ defmodule MatrixClient.Session do
     Agent.get(bucket, &Map.get(&1, :aliases))
   end
 
+  def get_ids(bucket) do
+    Agent.get(bucket, &Map.get(&1, :ids))
+  end
+
   def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
   end
@@ -56,8 +60,15 @@ defmodule MatrixClient.Session do
     put(bucket, :invites, new_invites)
   end
 
-  def update_aliases(bucket, new_aliases) do
-    put(bucket, :aliases, new_aliases)
+  def update_aliases(bucket, alias_updates, aliases) do
+    new_aliases = Map.new(alias_updates)
+    put(bucket, :aliases, Map.merge(aliases, new_aliases))
+  end
+
+  def update_ids(bucket, alias_updates, ids) do
+    new_updates = Enum.map(alias_updates, fn {room_id, a} -> {a, room_id} end)
+    new_ids = Map.new(new_updates)
+    put(bucket, :ids, Map.merge(ids, new_ids))
   end
 
   def update_next_batch(bucket, next_batch) do
@@ -89,8 +100,9 @@ defmodule MatrixClient.Session do
     new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
     update_rooms(bucket, new_rooms)
 
-    new_aliases = Enum.reduce(join_rooms, get_aliases(bucket), &sync_alias/2)
-    update_aliases(bucket, new_aliases)
+    alias_updates = Enum.reduce(join_rooms, [], &sync_alias/2)
+    update_aliases(bucket, alias_updates, get_aliases(bucket))
+    update_ids(bucket, alias_updates, get_ids(bucket))
 
     invite_rooms = room_invite_data(data)
     new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
@@ -163,26 +175,13 @@ defmodule MatrixClient.Session do
     Map.delete(rooms, room_id)
   end
 
-  def sync_alias({room_id, room_data}, aliases) do
+  def sync_alias({room_id, room_data}, updates) do
     %{"timeline" => %{"events" => events}} = room_data
 
     case filter_alias_event(events) do
-      [ae] -> alias_helper_ids(aliases, room_id, ae["content"]["alias"])
-      _ -> aliases
+      [e] -> [{room_id, e["content"]["alias"]} | updates]
+      _ -> updates
     end
-  end
-
-  defp alias_helper_ids(aliases, room_id, a) do
-    ids = aliases[:ids]
-    new_ids = Map.put(ids, room_id, a)
-    new_aliases = Map.put(aliases, :ids, new_ids)
-    alias_helper_aliases(new_aliases, room_id, a)
-  end
-
-  defp alias_helper_aliases(aliases, room_id, a) do
-    as = aliases[:aliases]
-    new_aliases = Map.put(as, a, room_id)
-    Map.put(aliases, :aliases, new_aliases)
   end
 
   defp filter_alias_event(events) do

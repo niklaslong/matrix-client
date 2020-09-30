@@ -91,18 +91,17 @@ defmodule MatrixClient do
 
     handle_result(
       Client.joined_rooms(url, token),
-      fn body -> {:ok, joined_rooms_helper(session, body["joined_rooms"])} end
+      fn body -> {:ok, joined_rooms_formatter(session, body["joined_rooms"])} end
     )
   end
 
-  defp joined_rooms_helper(session, room_ids) do
+  defp joined_rooms_formatter(session, room_ids) do
     aliases = Session.get_aliases(session)
 
     Enum.map(room_ids, fn room_id ->
-      if aliases[:ids][room_id] do
-        %{room_id: room_id, alias: aliases[:ids][room_id]}
-      else
-        %{room_id: room_id}
+      case aliases[room_id] do
+        nil -> %{room_id: room_id}
+        a -> %{room_id: room_id, alias: a}
       end
     end)
   end
@@ -145,10 +144,10 @@ defmodule MatrixClient do
   end
 
   def room_timeline(pid, room_id) do
-    aliases = Session.get_aliases(pid)
+    ids = Session.get_ids(pid)
 
     new_id =
-      case aliases[:aliases][room_id] do
+      case ids[room_id] do
         nil -> room_id
         id -> id
       end
@@ -186,24 +185,24 @@ defmodule MatrixClient do
   defp get_room_messages(pid, room_id, direction) do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
-    aliases = Session.get_aliases(pid)
+    ids = Session.get_ids(pid)
 
     new_id =
-      case aliases[:aliases][room_id] do
+      case ids[room_id] do
         nil -> room_id
         id -> id
       end
 
     case Session.prev_batch(pid, new_id) do
       {:ok, prev} ->
-        room_message_helper(Client.room_messages(url, token, new_id, prev, direction))
+        filter_messages(Client.room_messages(url, token, new_id, prev, direction))
 
       {:error, _} = e ->
         e
     end
   end
 
-  defp room_message_helper(result) do
+  defp filter_messages(result) do
     handle_result(result, fn body ->
       Enum.filter(body["chunk"], fn m ->
         m["type"] == "m.room.message"
@@ -221,17 +220,17 @@ defmodule MatrixClient do
 
     case result do
       {:ok, %{status: 200} = resp} ->
-        h.(body_helper(resp))
+        h.(body_formatter(resp))
 
       {:ok, resp} ->
-        {:error, body_helper(resp)}
+        {:error, body_formatter(resp)}
 
       {:error, _} = e ->
         e
     end
   end
 
-  defp body_helper(response) do
+  defp body_formatter(response) do
     body = response.body
     Map.put(body, :status, response.status)
   end
