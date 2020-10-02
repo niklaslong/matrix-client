@@ -5,7 +5,9 @@ defmodule MatrixClient.Session do
   Starts a new session with a base_url.
   """
   def start_link(url) do
-    Agent.start_link(fn -> %{url: url, rooms: %{}, invites: %{}} end)
+    Agent.start_link(fn ->
+      %{url: url, rooms: %{}, invites: %{}, aliases: %{}, ids: %{}}
+    end)
   end
 
   @doc """
@@ -42,12 +44,31 @@ defmodule MatrixClient.Session do
     Agent.get(bucket, &Map.get(&1, :invites))
   end
 
+  def get_aliases(bucket) do
+    Agent.get(bucket, &Map.get(&1, :aliases))
+  end
+
+  def get_ids(bucket) do
+    Agent.get(bucket, &Map.get(&1, :ids))
+  end
+
   def update_rooms(bucket, new_rooms) do
     put(bucket, :rooms, new_rooms)
   end
 
   def update_invites(bucket, new_invites) do
     put(bucket, :invites, new_invites)
+  end
+
+  def update_aliases(bucket, alias_updates, aliases) do
+    new_aliases = Map.new(alias_updates)
+    put(bucket, :aliases, Map.merge(aliases, new_aliases))
+  end
+
+  def update_ids(bucket, alias_updates, ids) do
+    new_updates = Enum.map(alias_updates, fn {room_id, a} -> {a, room_id} end)
+    new_ids = Map.new(new_updates)
+    put(bucket, :ids, Map.merge(ids, new_ids))
   end
 
   def update_next_batch(bucket, next_batch) do
@@ -79,6 +100,10 @@ defmodule MatrixClient.Session do
     new_rooms = Enum.reduce(join_rooms, get_rooms(bucket), &sync_room/2)
     update_rooms(bucket, new_rooms)
 
+    alias_updates = Enum.reduce(join_rooms, [], &sync_alias/2)
+    update_aliases(bucket, alias_updates, get_aliases(bucket))
+    update_ids(bucket, alias_updates, get_ids(bucket))
+
     invite_rooms = room_invite_data(data)
     new_invites = Enum.reduce(invite_rooms, get_invites(bucket), &sync_invite/2)
     update_invites(bucket, new_invites)
@@ -92,17 +117,20 @@ defmodule MatrixClient.Session do
   end
 
   def sync_room({room_id, room_data}, rooms) do
-    %{"timeline" => %{"events" => timeline}} = room_data
+    %{"timeline" => %{"events" => timeline, "prev_batch" => prev_batch}} = room_data
 
     if rooms[room_id] do
+      old_t = rooms[room_id][:timeline]
+
       new_timeline =
-        rooms[room_id]
+        old_t
         |> Enum.concat(timeline)
         |> Enum.uniq()
 
-      Map.put(rooms, room_id, new_timeline)
+      Map.put(rooms, room_id, %{timeline: new_timeline, prev_batch: prev_batch})
     else
-      Map.put(rooms, room_id, timeline)
+      room = %{timeline: timeline, prev_batch: prev_batch}
+      Map.put(rooms, room_id, room)
     end
   end
 
@@ -111,7 +139,16 @@ defmodule MatrixClient.Session do
 
     case rooms[room_id] do
       nil -> {:error, "#{room_id} not found"}
-      timeline -> {:ok, timeline}
+      room -> {:ok, room[:timeline]}
+    end
+  end
+
+  def prev_batch(bucket, room_id) do
+    rooms = get_rooms(bucket)
+
+    case rooms[room_id] do
+      nil -> {:error, "#{room_id} not found. Try syncing."}
+      room -> {:ok, room[:prev_batch]}
     end
   end
 
@@ -136,5 +173,20 @@ defmodule MatrixClient.Session do
 
   def sync_leave({room_id, _}, rooms) do
     Map.delete(rooms, room_id)
+  end
+
+  def sync_alias({room_id, room_data}, updates) do
+    %{"timeline" => %{"events" => events}} = room_data
+
+    case filter_alias_event(events) do
+      [e] -> [{room_id, e["content"]["alias"]} | updates]
+      _ -> updates
+    end
+  end
+
+  defp filter_alias_event(events) do
+    Enum.filter(events, fn e ->
+      e["type"] == "m.room.canonical_alias"
+    end)
   end
 end
