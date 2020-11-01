@@ -5,6 +5,7 @@ defmodule MatrixClient do
 
   alias MatrixClient.{Session}
   alias MatrixSDK.{Client}
+  alias MatrixSDK.Client.{Request}
 
   def new_session(url) do
     Session.start_link(url)
@@ -12,12 +13,18 @@ defmodule MatrixClient do
 
   def spec_versions(session) do
     {:ok, url} = Session.get(session, :url)
-    handle_result(Client.spec_versions(url))
+    url
+    |> Request.spec_versions
+    |> Client.do_request
+    |> handle_result
   end
 
   def server_discovery(session) do
     {:ok, url} = Session.get(session, :url)
-    handle_result(Client.server_discovery(url))
+    url
+    |> Request.server_discovery
+    |> Client.do_request
+    |> handle_result
   end
 
   def register_user(session, username, password) do
@@ -25,8 +32,13 @@ defmodule MatrixClient do
     auth = Client.Auth.login_dummy()
     opts = %{username: username}
 
+    result =
+      url
+      |> Request.register_user(password, auth, opts)
+      |> Client.do_request
+
     handle_result(
-      Client.register_user(url, password, auth, opts),
+      result,
       fn body ->
         case Map.get(body, "access_token") do
           nil -> {:error, "No token found"}
@@ -40,8 +52,13 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(session, :url)
     auth = Client.Auth.login_user(username, password)
 
+    result =
+      url
+      |> Request.login(auth)
+    |> Client.do_request
+
     handle_result(
-      Client.login(url, auth),
+      result,
       fn body ->
         token = Map.get(body, "access_token")
 
@@ -57,40 +74,64 @@ defmodule MatrixClient do
   def logout(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.logout(url, token))
+    url
+    |> Request.logout(token)
+    |> Client.do_request
+    |> handle_result
   end
 
   def create_room(session, name, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
     new_opts = Map.put(opts, :room_alias_name, name)
-    handle_result(Client.create_room(url, token, new_opts))
+    
+    url
+    |> Request.create_room(token, new_opts)
+    |> Client.do_request
+    |> handle_result
   end
 
   def create_anonymous_room(session, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.create_room(url, token, opts))
+    
+    url
+    |> Request.create_room(token, opts)
+    |> Client.do_request
+    |> handle_result
   end
 
   def join_room(session, room_id, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.join_room(url, token, room_id, opts))
+
+    url
+    |> Request.join_room(token, room_id, opts)
+    |> Client.do_request
+    |> handle_result
   end
 
   def leave_room(session, room_id) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    handle_result(Client.leave_room(url, token, room_id))
+
+    url
+    |> Request.leave_room(token, room_id)
+    |> Client.do_request
+    |> handle_result
   end
 
   def joined_rooms(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
 
+    result =
+      url
+      |> Request.joined_rooms(token)
+    |> Client.do_request
+
     handle_result(
-      Client.joined_rooms(url, token),
+      result,
       fn body -> {:ok, joined_rooms_formatter(session, body["joined_rooms"])} end
     )
   end
@@ -122,7 +163,10 @@ defmodule MatrixClient do
         tx_id()
       )
 
-    handle_result(Client.send_room_event(url, token, room_event))
+    url
+    |> Request.send_room_event(token, room_event)
+    |> Client.do_request
+    |> handle_result
   end
 
   def sync(pid, opts \\ %{}) do
@@ -135,8 +179,13 @@ defmodule MatrixClient do
         _ -> opts
       end
 
+    result =
+      url
+      |> Request.sync(token, new_opts)
+      |> Client.do_request
+    
     handle_result(
-      Client.sync(url, token, new_opts),
+      result,
       fn body ->
         Session.sync_rooms(pid, body)
       end
@@ -158,7 +207,11 @@ defmodule MatrixClient do
   def invite_to_room(pid, room_id, user_id) do
     {:ok, url} = Session.get(pid, :url)
     {:ok, token} = Session.get(pid, :token)
-    handle_result(Client.room_invite(url, token, room_id, user_id))
+
+    url
+    |> Request.room_invite(token, room_id, user_id)
+    |> Client.do_request
+    |> handle_result
   end
 
   def invites(pid) do
@@ -195,7 +248,10 @@ defmodule MatrixClient do
 
     case Session.prev_batch(pid, new_id) do
       {:ok, prev} ->
-        filter_messages(Client.room_messages(url, token, new_id, prev, direction))
+	url
+	|> Request.room_messages(token, new_id, prev, direction)
+	|> Client.do_request
+	|> filter_messages
 
       {:error, _} = e ->
         e
