@@ -13,17 +13,19 @@ defmodule MatrixClient do
 
   def spec_versions(session) do
     {:ok, url} = Session.get(session, :url)
+
     url
-    |> Request.spec_versions
-    |> Client.do_request
+    |> Request.spec_versions()
+    |> Client.do_request()
     |> handle_result
   end
 
   def server_discovery(session) do
     {:ok, url} = Session.get(session, :url)
+
     url
-    |> Request.server_discovery
-    |> Client.do_request
+    |> Request.server_discovery()
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -35,7 +37,7 @@ defmodule MatrixClient do
     result =
       url
       |> Request.register_user(password, auth, opts)
-      |> Client.do_request
+      |> Client.do_request()
 
     handle_result(
       result,
@@ -55,7 +57,7 @@ defmodule MatrixClient do
     result =
       url
       |> Request.login(auth)
-    |> Client.do_request
+      |> Client.do_request()
 
     handle_result(
       result,
@@ -74,9 +76,10 @@ defmodule MatrixClient do
   def logout(session) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
+
     url
     |> Request.logout(token)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -84,20 +87,20 @@ defmodule MatrixClient do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
     new_opts = Map.put(opts, :room_alias_name, name)
-    
+
     url
     |> Request.create_room(token, new_opts)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
   def create_anonymous_room(session, opts \\ %{}) do
     {:ok, url} = Session.get(session, :url)
     {:ok, token} = Session.get(session, :token)
-    
+
     url
     |> Request.create_room(token, opts)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -107,7 +110,7 @@ defmodule MatrixClient do
 
     url
     |> Request.join_room(token, room_id, opts)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -117,7 +120,7 @@ defmodule MatrixClient do
 
     url
     |> Request.leave_room(token, room_id)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -128,7 +131,7 @@ defmodule MatrixClient do
     result =
       url
       |> Request.joined_rooms(token)
-    |> Client.do_request
+      |> Client.do_request()
 
     handle_result(
       result,
@@ -165,7 +168,7 @@ defmodule MatrixClient do
 
     url
     |> Request.send_room_event(token, room_event)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -182,8 +185,8 @@ defmodule MatrixClient do
     result =
       url
       |> Request.sync(token, new_opts)
-      |> Client.do_request
-    
+      |> Client.do_request()
+
     handle_result(
       result,
       fn body ->
@@ -210,7 +213,7 @@ defmodule MatrixClient do
 
     url
     |> Request.room_invite(token, room_id, user_id)
-    |> Client.do_request
+    |> Client.do_request()
     |> handle_result
   end
 
@@ -248,10 +251,10 @@ defmodule MatrixClient do
 
     case Session.prev_batch(pid, new_id) do
       {:ok, prev} ->
-	url
-	|> Request.room_messages(token, new_id, prev, direction)
-	|> Client.do_request
-	|> filter_messages
+        url
+        |> Request.room_messages(token, new_id, prev, direction)
+        |> Client.do_request()
+        |> filter_messages
 
       {:error, _} = e ->
         e
